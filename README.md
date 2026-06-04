@@ -1,15 +1,26 @@
-# Contribution [#]: [Issue Title]
+# Contribution 1: [Security] Referral number and ID rendered without encoding in billingreferralAdmin.jsp
 
-**Contribution Number:** [1 / 2 / 3]  
-**Student:** [Your Name]  
-**Issue:** [GitHub issue link]  
-**Status:** [Phase I / Phase II / Phase III / Phase IV] [In Progress / Complete]
+**Contribution Number:** 1  
+**Student:** Zeel Patel  
+**Issue:** https://github.com/carlos-emr/carlos/issues/2307  
+**Status:** Phase I Complete
 
 ---
 
 ## Why I Chose This Issue
 
-[1-2 paragraphs explaining why this issue interests you, how it matches your skills/learning goals, what you hope to learn]
+I chose issue #2307 "[Security] Referral number and ID rendered without encoding in billingreferralAdmin.jsp" because it aligns with my goal to improve my secure coding practices in Java-based web applications, specifically around preventing Cross-Site Scripting (XSS). The issue is well-scoped, targets a single JSP page (`billingreferralAdmin.jsp`), and has clear, actionable instructions in the issue description.
+
+I'm interested in this because:
+1. I want to build a deeper understanding of context-appropriate encoding (e.g., HTML attribute vs. JavaScript context vs. HTML content context) as enforced by the OWASP Java Encoder.
+2. The Carlos EMR codebase uses specialized null-safe tags (like `<carlos:encode>`) and EL functions (like `${carlos:forHtmlAttribute()}` and `${carlos:forJavaScript()}`), which is a great production-level framework pattern to learn.
+3. The codebase has a clean setup and robust local environment (Tomcat 11 / Docker), making it possible to verify the fixes by compiling the JSPs and checking the rendered HTML source.
+4. Contributing to a medical EMR system highlights the importance of defensive coding in production systems containing Protected Health Information (PHI).
+
+From reading the issue thread, I understand the current problem is that database identifiers like `${referral.id}` and legacy JSP scriptlet expressions like `<%=linkName%>` are output directly into attributes, JS event handlers, and the HTML body. If these variables were ever control-manipulated, they could trigger script execution. By encoding them correctly, I will perform defensive hardening to ensure data integrity and security.
+
+I have left a comment on the GitHub issue to claim it, introducing myself to the maintainers as a first-time contributor.
+
 
 ---
 
