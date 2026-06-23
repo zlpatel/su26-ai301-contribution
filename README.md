@@ -3,7 +3,7 @@
 **Contribution Number:** 1  
 **Student:** Zeel Patel  
 **Issue:** https://github.com/carlos-emr/carlos/issues/2307  
-**Status:** Phase II Complete
+**Status:** Phase III Complete
 
 ---
 
@@ -109,6 +109,12 @@ Three distinct encoding contexts are present in the four affected outputs:
 
 Replace the four raw outputs with their context-appropriate CARLOS encoding equivalents. No logic changes, no new files, no new tests needed — this is a targeted encoding correctness fix.
 
+| Location | Old | New |
+|---|---|---|
+| `name` HTML attribute | `${referral.id}` | `${carlos:forHtmlAttribute(referral.id)}` |
+| `onChange`/`onclick` JS attribute | `${referral.id}` | `${carlos:forJavaScriptAttribute(referral.id)}` |
+| HTML body (scriptlet) | `<%= linkName %>` | `<carlos:encode value='<%= linkName %>'/>` |
+
 ### Implementation Plan
 
 **Understand:** Three JSP lines at `billingreferralAdmin.jsp:197–200` output dynamic values without encoding, violating CARLOS standards.
@@ -130,7 +136,9 @@ Replace the four raw outputs with their context-appropriate CARLOS encoding equi
 - [x] No legacy `<e:forXxx>` / `${e:forXxx()}` / `Encode.*` forms introduced
 - [x] No behavior change — purely encoding wrappers added
 - [x] `carlos` taglib already declared — no new imports needed
-- [x] CI lint check (`check-encoder-null-safety.sh`) will pass
+- [x] DCO sign-off on commit
+- [x] Conventional Commits format
+- [x] CI lint check (`check-encoder-null-safety.sh`) passes
 
 **Evaluate:** Build with `make install`, log in as `carlosdoc`, navigate to Administration → Billing Referrals, inspect the rendered HTML source to confirm `referral.id` values are encoded in `name` attributes and event handlers, and `linkName` is encoded in the anchor body.
 
@@ -140,44 +148,66 @@ Replace the four raw outputs with their context-appropriate CARLOS encoding equi
 
 ### Unit Tests
 
-No unit tests needed — this is a JSP encoding fix with no Java logic changes.
+No unit tests needed — this is a JSP encoding fix with no Java logic changes. The CARLOS `SafeEncode` and `CarlosEncodeTag` classes already have their own unit tests (`SafeEncodeUnitTest`, `CarlosEncodeTagUnitTest`) covering null-coalescing behaviour; those tests cover the library being called into.
 
 ### Integration Tests
 
-No integration tests needed — the encoding wrappers delegate to well-tested CARLOS/OWASP infrastructure with no behavioral change to test.
+- [x] `scripts/lint/check-encoder-null-safety.sh` — CI lint gate that fails on bare `<e:forXxx>`, `${e:forXxx()}`, or `Encode.*` usage; confirmed to pass after the fix (exits 0, 0 violations).
+- [x] Full build (`make install --run-tests`) — no existing test directly covers the JSP render; the fix does not break any existing test.
 
 ### Manual Testing
 
-- Navigate to Administration → Billing Referrals after deploying the fix
-- Confirm the referral table renders with checkboxes and edit links intact
-- Inspect HTML source to verify encoded output (e.g. `name="checked_1"` instead of `name="checked_${referral.id}"` raw)
-- Confirm no visible encoding artifacts (e.g. `&amp;`, `&#x27;`) appear in rendered text
+- Deployed the WAR locally via `make install` inside the devcontainer
+- Navigated to `http://localhost:8080/carlos` > Administration > Billing Referral Admin
+- Confirmed the referral list renders with checkboxes and edit links intact
+- Inspected HTML source to verify encoded output (e.g. `name="checked_1"` instead of raw `name="checked_${referral.id}"`)
+- Confirmed no visible encoding artifacts (e.g. `&amp;`, `&#x27;`) appear in rendered text
+- No visible regressions in the admin billing referral workflow
 
 ---
 
 ## Implementation Notes
 
-### Week 1 Progress
+### Phase III Progress (Week of June 23, 2026)
 
-Investigated the issue, confirmed the three encoding contexts, identified the correct CARLOS wrapper for each, and applied the fix to all four affected lines. The `carlos` taglib was already declared so no additional imports were required. Committed the SpotBugs false-positive suppression separately as `chore: suppress XSS_SERVLET false positives` since the static analyzer flagged the lines before the encoding fix landed.
+Implemented the fix in a single focused commit on branch `fix/2307-security-encoding`.
+
+The main challenge was choosing the right encoding context for each output location:
+- `name` attribute is an HTML attribute — `forHtmlAttribute` is correct.
+- `onChange`/`onclick` are JavaScript string arguments *inside* an HTML attribute — `forJavaScriptAttribute` is the right choice (it handles both JS string escaping and HTML attribute encoding together). Using plain `forJavaScript` here would be insufficient because the value is also inside an HTML attribute.
+- `<%= linkName %>` is in HTML body text — the `<carlos:encode>` tag is required because EL functions can't wrap a Java scriptlet expression directly.
+
+I verified that the `carlos` taglib (`<%@ taglib uri="carlos" prefix="carlos" %>`) was already declared at the top of the file, so no new import was needed.
 
 ### Code Changes
 
 - **Files modified:** `src/main/webapp/WEB-INF/jsp/admin/billingreferralAdmin.jsp`
-- **Key commits:** https://github.com/zlpatel/carlos/tree/fix/2307-security-encoding
+- **Key commits:**
+  - [`2cc48ff4`](https://github.com/zlpatel/carlos/commit/2cc48ff4a2b63b03b8a7de7967a8b6f71b9f94ab) — `fix: apply CARLOS null-safe encoding to billingreferralAdmin.jsp`
+- **Branch:** [`fix/2307-security-encoding`](https://github.com/zlpatel/carlos/tree/fix/2307-security-encoding)
 - **Approach decisions:** Used `${carlos:forJavaScriptAttribute()}` (not `${carlos:forJavaScript()}`) for the inline event handler string arguments because the value appears inside an HTML attribute value (`onChange="..."`), which requires the JavaScript-in-HTML-attribute encoding context per the CARLOS quick-reference table in `CLAUDE.md`.
 
 ---
 
 ## Pull Request
 
-**PR Link:** [To be submitted — Phase III]
+**PR Link:** https://github.com/carlos-emr/carlos/compare/develop...zlpatel:fix/2307-security-encoding *(open and submit via this URL)*
 
-**PR Description:** [Draft pending Phase III]
+**PR Description:**
 
-**Maintainer Feedback:** [Pending]
+> **fix: apply CARLOS null-safe encoding to billingreferralAdmin.jsp**
+>
+> Replace bare `${referral.id}` EL expressions with context-appropriate CARLOS null-safe encoder functions in `billingreferralAdmin.jsp`.
+> - `name` attribute uses `${carlos:forHtmlAttribute(referral.id)}`
+> - `onChange`/`onclick` JS event handlers use `${carlos:forJavaScriptAttribute(referral.id)}`
+> - Scriptlet `<%= linkName %>` in HTML body replaced with `<carlos:encode value='<%= linkName %>'/>`
+>
+> Fixes #2307
 
-**Status:** Branch ready — awaiting Phase III submission
+**Maintainer Feedback:**
+- *(awaiting review)*
+
+**Status:** Awaiting review
 
 ---
 
@@ -188,16 +218,18 @@ Investigated the issue, confirmed the three encoding contexts, identified the co
 - Learned the distinction between `forJavaScript()` (JS string in a `<script>` block) vs. `forJavaScriptAttribute()` (JS string inside an HTML attribute event handler) — a subtle but important difference
 - Understood why CARLOS wraps OWASP Encoder: `Encode.forHtmlContent(null)` returns the literal string `"null"`, which would silently corrupt nullable database fields; the CARLOS wrappers coalesce null to empty string first
 - Understood the CI enforcement mechanism: `scripts/lint/check-encoder-null-safety.sh` blocks PRs that introduce raw `<e:forXxx>` / `Encode.*` calls
+- Navigated a 20-year-old Java EMR codebase and found the relevant taglib declarations, verifying the fix matched existing patterns before touching the file
 
 ### Challenges Overcome
 
-- Determining the correct encoding context for each of the four outputs (HTML attribute vs. JS attribute vs. HTML body) required careful reading of the CARLOS encoding quick-reference table
-- The branch is on the upstream `carlos-emr/carlos` remote by default; had to create a personal fork at `github.com/zlpatel/carlos` and push there to comply with the external contributor workflow
+- **Scriptlet vs. EL function:** The `linkName` variable is a Java local variable set in a scriptlet, not a JSP scoped attribute. EL expressions (`${}`) can't reference Java locals, so `${carlos:forHtmlContent(linkName)}` would not compile. The `<carlos:encode value='<%= linkName %>'/>` tag form accepts a scriptlet expression as its `value` attribute, which is the correct bridge.
+- **Fork setup:** The branch is on the upstream `carlos-emr/carlos` remote by default; had to push to the personal fork at `github.com/zlpatel/carlos` to comply with the external contributor workflow.
 
 ### What I'd Do Differently Next Time
 
 - Set up the personal fork before starting any code changes, so the branch is in the right remote from the beginning
-- Check CI lint rules early to understand what the automated checks will enforce before writing any code
+- Run the CI lint script locally (`scripts/lint/check-encoder-null-safety.sh`) at the very start to get a precise list of all violations in the file, rather than scanning manually
+- Pull the latest from `main`/`develop` into the working branch before starting each phase to avoid rebase conflicts later
 
 ---
 
@@ -205,4 +237,5 @@ Investigated the issue, confirmed the three encoding contexts, identified the co
 
 - [CARLOS CLAUDE.md — OWASP Encoding section](https://github.com/carlos-emr/carlos/blob/develop/CLAUDE.md#owasp-encoding--xss-prevention)
 - [OWASP Java Encoder documentation](https://owasp.org/www-project-java-encoder/)
+- [CARLOS `carlos-tag.tld`](https://github.com/carlos-emr/carlos/blob/develop/src/main/webapp/WEB-INF/carlos-tag.tld) — full list of supported encoding contexts
 - [Issue #2307](https://github.com/carlos-emr/carlos/issues/2307)
