@@ -3,7 +3,7 @@
 **Contribution Number:** 1  
 **Student:** Zeel Patel  
 **Issue:** https://github.com/carlos-emr/carlos/issues/2307  
-**Status:** Phase III Complete
+**Status:** Phase IV Complete
 
 ---
 
@@ -191,23 +191,21 @@ I verified that the `carlos` taglib (`<%@ taglib uri="carlos" prefix="carlos" %>
 
 ## Pull Request
 
-**PR Link:** https://github.com/carlos-emr/carlos/compare/develop...zlpatel:fix/2307-security-encoding *(open and submit via this URL)*
+**PR Link:** https://github.com/carlos-emr/carlos/pull/3002
 
 **PR Description:**
 
-> **fix: apply CARLOS null-safe encoding to billingreferralAdmin.jsp**
->
-> Replace bare `${referral.id}` EL expressions with context-appropriate CARLOS null-safe encoder functions in `billingreferralAdmin.jsp`.
-> - `name` attribute uses `${carlos:forHtmlAttribute(referral.id)}`
-> - `onChange`/`onclick` JS event handlers use `${carlos:forJavaScriptAttribute(referral.id)}`
-> - Scriptlet `<%= linkName %>` in HTML body replaced with `<carlos:encode value='<%= linkName %>'/>`
->
-> Fixes #2307
+Apply context-appropriate CARLOS null-safe encoding to three unencoded dynamic outputs in `billingreferralAdmin.jsp`:
+- `name="checked_${referral.id}"` → `name="checked_${carlos:forHtmlAttribute(referral.id)}"` (HTML attribute context)
+- `onChange`/`onclick` event handler string arguments → `${carlos:forJavaScriptAttribute(referral.id)}` (JS-in-HTML-attribute context)
+- `<%=linkName %>` in HTML body → `<carlos:encode value='<%= linkName %>'/>` (HTML body context)
+
+The `carlos` taglib was already declared in the file; this change adds only the missing wrapper calls. Fixes #2307.
 
 **Maintainer Feedback:**
-- *(awaiting review)*
+- "Thank you! Appreciate the contribution. Small, but it is all needed and helps. :-D"
 
-**Status:** Awaiting review
+**Status:** Merged
 
 ---
 
